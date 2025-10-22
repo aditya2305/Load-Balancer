@@ -29,34 +29,6 @@ The application includes a **visual ring interface** so you can **add/remove ser
 
 ---
 
-## Getting Started
-
-### Prerequisites
-- Node.js (v16 or higher)
-- npm or yarn
-
-### Installation & Running
-
-1. **Navigate to the frontend directory:**
-   ```bash
-   cd frontend
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Start the development server:**
-   ```bash
-   npm run dev
-   ```
-
-4. **Open your browser:**
-   Navigate to `http://localhost:5173` (or the port shown in your terminal)
-
----
-
 ## How to Use the Application
 
 ### Understanding the Interface
