@@ -1,4 +1,4 @@
-# Load Balancer Visualizer
+# Custom Load Balancer & Visualizer
 
 An interactive **web application** that demonstrates multiple load balancing strategies through real-time visualization:
 
