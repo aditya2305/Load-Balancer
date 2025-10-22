@@ -1,70 +1,88 @@
-# Load Balancer (Round Robin / Simple Hash / Consistent Hashing)
+# Load Balancer Visualizer
 
-A lightweight **TCP load balancer** written in Go that demonstrates multiple balancing strategies:
+An interactive **web application** that demonstrates multiple load balancing strategies through real-time visualization:
 
 - **Round Robin** - even per-request distribution  
 - **Simple Hash** - sticky by key (`hash(key) % N`)  
 - **Consistent Hash (ring)** - sticky and low-churn under node changes  
 - **Static** - pin all traffic to one backend (useful for debugging/canary)
 
-It includes a built-in **REPL (Read-Eval-Print Loop)** so you can **add/remove backends** and **switch strategies at runtime**, while visualizing how **keys move** after each change.
+The application includes a **visual ring interface** so you can **add/remove servers** and **switch strategies at runtime**, while seeing exactly **how keys move** after each change in real-time.
 
 ---
 
 ## Features
 
-- L4 (TCP) proxy on **:9090**
-- Pluggable strategies:
+- **Interactive Ring Visualization** - see servers arranged around a ring with real-time routing
+- **Live Key Assignment Tracking** - watch which keys are assigned to which servers
+- **Churn Analysis** - before/after comparison showing key movement when topology changes
+- **Multiple Strategies**:
   - Round Robin
-  - Simple Hash
+  - Simple Hash  
   - Consistent Hash
   - Static
-- Live **control-plane REPL** (interactive command-line interface)
-  - `add <port>` / `rm <port>`
-  - `strat rr|simple|ch|static`
-  - `show` → prints key → backend mapping
-- Key-movement diff after every change (**visualizes churn**)
-- Minimal HTTP backend servers for testing on ports **8081–8084**
+- **Real-time Controls**:
+  - Add/Remove servers dynamically
+  - Switch strategies instantly
+  - Fire requests with custom or random keys
+  - Clear and reset functionality
 
 ---
 
-## Project Structure
+## Getting Started
 
-```text
-loadbalancer/
-├── backend/
-│   └── backend.go    # simple HTTP server used as a backend
-├── lb.go             # load balancer core (proxy, events, diffs)
-├── main.go           # REPL + LB bootstrap
-├── strategy.go       # strategies (RR, SimpleHash, ConsistentHash, Static)
-├── go.mod
-└── go.sum
-```
+### Prerequisites
+- Node.js (v16 or higher)
+- npm or yarn
 
----
+### Installation & Running
 
-## Architecture
+1. **Navigate to the frontend directory:**
+   ```bash
+   cd frontend
+   ```
 
-### Data Plane
-- `lb.Run()` listens on port `:9090`.
-- Accepts TCP connections.
-- Selects a backend via the **active strategy**.
-- Proxies data bidirectionally using `io.Copy`.
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-### Control Plane (REPL → Events)
-A goroutine consumes events from `lb.events`:
-- `CMD_BackendAdd` / `CMD_BackendRemove`
-- `CMD_StrategyChange`
-- `CMD_ShowMapping`
+3. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
 
-After each change, the LB logs a **before/after** mapping for demo keys to show **how many keys moved**.
-
-### Demo Keys
-`10.0.0.1 … 10.0.0.12` - used to visualize **stickiness** and **churn** via `show`.
+4. **Open your browser:**
+   Navigate to `http://localhost:5173` (or the port shown in your terminal)
 
 ---
 
-## Strategies
+## How to Use the Application
+
+### Understanding the Interface
+
+The application is divided into three main sections:
+
+#### **1. Control Panel (Top Row)**
+- **Initialization**: Set up 3-6 servers, add/remove servers, reset everything
+- **Traffic & Strategy**: Enter keys, select load balancing strategy, fire requests
+- **Legend**: Visual guide explaining the interface elements
+
+#### **2. Ring Visualizer (Middle)**
+- **Central Blue Circle**: Click to fire requests (source)
+- **Server Nodes**: Arranged around the ring, showing:
+  - Port number (8081, 8082, etc.)
+  - Number of assigned keys
+  - Green highlighting for last routed server
+- **Animated Arrow**: Shows the path from source to target server
+
+#### **3. Analysis Panels (Bottom Row)**
+- **Key Assignments Table**: Shows which keys are assigned to which servers
+- **Churn Analysis**: Displays key movement when servers are added/removed
+
+---
+
+## Load Balancing Strategies Explained
 
 | Strategy | Mental Model | Pros | Cons | Sticky? |
 |----------|--------------|------|------|---------|
@@ -75,213 +93,137 @@ After each change, the LB logs a **before/after** mapping for demo keys to show 
 
 ---
 
-## How Consistent Hashing Works Here
+## How to Test Each Strategy
 
-The consistent hashing implementation is based on the concepts explained in [this article by Arpit Bhayani](https://arpitbhayani.me/blogs/consistent-hashing/).
+### **Round Robin**
+1. Select "Round Robin" from the strategy dropdown
+2. Click "Fire" multiple times
+3. **Observe**: Each request goes to the next server in sequence (1→2→3→4→1...)
+4. **Key Insight**: No stickiness - same key can go to different servers
 
-1. Hash backends (by `"host:port"`) into a fixed **32-bit ring** (SHA-256 → first 4 bytes).  
-2. Hash the **request key** (e.g., client IP, user ID) to a ring position.  
-3. Route to the **first server strictly clockwise** from the key (wrap if needed).  
-4. Adding/removing a node only moves keys in that node's **adjacent arc** (→ minimal churn).
+### **Simple Hash**
+1. Select "Simple Hash" from the strategy dropdown
+2. Enter a key like "10.0.0.1" and click "Fire" multiple times
+3. **Observe**: Same key always goes to the same server (sticky)
+4. **Test Churn**: Add a server, then check the churn table
+5. **Key Insight**: Many keys move when server count changes
 
----
+### **Consistent Hash**
+1. Select "Consistent Hash" from the strategy dropdown
+2. Fire several requests with different keys
+3. **Test Churn**: Add a server, then check the churn table
+4. **Key Insight**: Only a few keys move when servers are added/removed
 
-## Run
-
-### Start the Backends (in 4 terminals)
-
-```bash
-cd backend
-go run backend.go -port 8081
-go run backend.go -port 8082
-go run backend.go -port 8083
-go run backend.go -port 8084
-```
-
-### Start the Load Balancer (with REPL)
-
-From the project root:
-
-```bash
-go run main.go lb.go strategy.go
-```
-
-You'll see the REPL help menu:
-
-```text
-commands:
-  show                      -> print key->backend mapping
-  strat rr|simple|ch|static -> change strategy
-  add <port>                -> add backend localhost:<port>
-  rm <port>                 -> remove backend localhost:<port>
-  exit                      -> stop LB
-```
-
-### Send Client Requests (from another terminal)
-
-```bash
-for i in {1..10}; do curl -s http://localhost:9090/; done
-```
-
-**Note:**
-For local testing, `lb.go` sets `key: uuid.NewString()` per connection to simulate multiple clients.
-If you want real stickiness by client IP, change it to:
-
-```go
-key: clientIP(connection.RemoteAddr().String())
-```
-
-From localhost (`::1`), you'll always hit the same backend.
+### **Static**
+1. Select "Static" from the strategy dropdown
+2. Choose a server index (0-3)
+3. Fire requests with any keys
+4. **Observe**: All requests go to the selected server regardless of key
 
 ---
 
-## Using the REPL (Live Testing)
+## Understanding Consistent Hashing
 
-**REPL** stands for **Read-Eval-Print Loop**, an interactive programming environment that reads user commands, evaluates them, prints the results, and loops back for the next command. In this load balancer, the REPL allows you to control the load balancer in real-time without restarting it.
+The consistent hashing implementation demonstrates the concepts from [this article by Arpit Bhayani](https://arpitbhayani.me/blogs/consistent-hashing/).
 
-### Show Current Mapping
+### How It Works:
+1. **Virtual Ring**: Each server gets 64 virtual positions on a hash ring
+2. **Key Hashing**: Request keys are hashed to ring positions
+3. **Clockwise Routing**: Route to the first server clockwise from the key's position
+4. **Minimal Movement**: Adding/removing servers only affects keys in adjacent ring segments
 
-```bash
-> show
-```
-
-Prints each demo key and which backend it maps to.
-
-### Switching Strategies
-
-```bash
-> strat rr
-> show
-> strat simple
-> show
-> strat ch
-> show
-```
-
-- **RR** will rotate per request (no stickiness).
-- **Simple Hash** and **Consistent Hash** will stick per key, use `show` to compare mappings.
-
-### Add / Remove a Backend
-
-```bash
-> add 8085
-> rm 8083
-```
-
-You'll see diffs:
-
-```text
-=== ADD ===
-key=10.0.0.1    localhost:8082 -> localhost:8085  <-- MOVED
-...
-moved=3/12 keys
-```
-
-- **Consistent Hash** - few keys move (only the affected ring arc).
-- **Simple Hash** - many keys move (since `% N` changes).
-
-### Exit
-
-```bash
-> exit
-```
+### Why It's Better:
+- **Simple Hash**: When you add a server, `hash(key) % N` changes for most keys → massive redistribution
+- **Consistent Hash**: Only keys in the new server's virtual range move → minimal churn
 
 ---
 
-## Implementation
+## Interactive Learning Scenarios
 
-### `strategy.go`
+### **Scenario 1: Understanding Sticky Sessions**
+1. Use "Simple Hash" strategy
+2. Fire requests with key "user123"
+3. **Observe**: Always goes to the same server
+4. Switch to "Round Robin"
+5. Fire requests with same key "user123"
+6. **Observe**: Goes to different servers each time
 
-#### SimpleHashStrategy
-- Hashes `req.key` using FNV-1a (32-bit).
-- Picks `idx = hash % len(backends)`.
-- Sticky and simple
-- High churn when backends change.
+### **Scenario 2: Comparing Churn**
+1. **Setup**: Fire 10+ requests with different keys using "Simple Hash"
+2. **Add Server**: Click "Add Server"
+3. **Check Churn**: Look at the "Churn (Before → After)" table
+4. **Repeat with Consistent Hash**: Reset, fire requests, add server
+5. **Compare**: Notice how many fewer keys moved with Consistent Hash
 
-#### RRBalancingStrategy
-- Uses cyclic counter:
-  ```go
-  index = (index + 1) % len(backends)
-  ```
-- Even spread
-- No stickiness.
+### **Scenario 3: Server Removal Impact**
+1. **Setup**: Fire requests to populate all servers
+2. **Remove Server**: Click "Remove Server"
+3. **Observe**: 
+   - Simple Hash: Most keys redistribute
+   - Consistent Hash: Only keys from removed server move to next server
 
-#### StaticBalancingStrategy
-- Always returns `backends[Index]` (default 0).
-- Useful for debugging, canary tests, or draining nodes.
-
-#### ConsistentHashStrategy
-- Keeps two sorted slices in sync:
-  - `keys []uint32` → ring positions
-  - `backends []*Backend` → corresponding servers
-- Hash positions with:
-  ```go
-  chPos(s) = SHA256("host:port") → first 4 bytes → uint32
-  ```
-- Routing:
-  - `sort.Search` for first `key > slot`
-  - wrap via `i % len(backends)`
-- Adding/removing a backend → `Init()` rebuilds topology.
-
-### `lb.go`
-- TCP accept loop → one goroutine per connection.
-- Generates random key (`uuid.NewString()`) to simulate clients.
-- Proxies client ↔ backend via `io.Copy`.
-- Uses REPL-driven events to dynamically:
-  - Add/remove backends
-  - Switch strategies
-  - Print before/after mappings
+### **Scenario 4: Round Robin Behavior**
+1. Select "Round Robin"
+2. Fire 8 requests with the same key
+3. **Observe**: Requests cycle through servers 1→2→3→4→1→2→3→4
+4. **Key Insight**: Round Robin ignores the key completely
 
 ---
 
-## Run Guide
+## Technical Implementation Details
 
-### Round Robin
-
-```bash
-> strat rr
+### **Simple Hash Strategy**
+```typescript
+function simpleHashPick(servers: Server[], key: string): Server | null {
+  if (servers.length === 0) return null;
+  const idx = hash32(key) % servers.length;  // Direct modulo
+  return servers[idx];
+}
 ```
+- **Pros**: Simple, sticky
+- **Cons**: High churn when server count changes
 
-Then run:
-
-```bash
-for i in {1..8}; do curl -s http://localhost:9090/; done
+### **Consistent Hash Strategy**
+```typescript
+function chPickServer(servers: Server[], keyStr: string): Server | null {
+  const pairs = ringPositions(servers);  // 64 virtual replicas per server
+  const slot = hash32(keyStr);
+  
+  // Binary search to find first position >= slot
+  let lo = 0, hi = pairs.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (pairs[mid].key >= slot) hi = mid; else lo = mid + 1;
+  }
+  return pairs[lo % pairs.length].server;
+}
 ```
+- **Pros**: Sticky + minimal churn
+- **Cons**: More complex, requires virtual replicas for smooth distribution
 
-You'll see rotation:
+### **Round Robin Strategy**
+```typescript
+// Stateful index that advances on each request
+const [rrIndex, setRrIndex] = useState(0);
 
-```text
-Hello from backend :8081
-Hello from backend :8082
-Hello from backend :8083
-Hello from backend :8084
+function fire() {
+  const s = servers[rrIndex % servers.length];
+  setRrIndex((i) => (i + 1) % servers.length);
+  // ... route to server s
+}
 ```
-
-### Simple Hash
-
-```bash
-> strat simple
-> show
-> add 8085
-> show
-```
-
-You'll see many keys move after add/remove.
-
-### Consistent Hash
-
-```bash
-> strat ch
-> show
-> add 8085
-> rm 8083
-> show
-```
-
-You'll see only a few keys move, proving low churn.
+- **Pros**: Even distribution, simple
+- **Cons**: No stickiness
 
 ---
 
-## References
+## Key Learning Outcomes
 
-- [Consistent Hashing - What It Is and How to Implement It](https://arpitbhayani.me/blogs/consistent-hashing/)
+After using this application, you'll understand:
+
+1. **Sticky vs Non-Sticky**: How different strategies handle session affinity
+2. **Churn Impact**: Why consistent hashing is preferred for distributed systems
+3. **Visual Learning**: See load balancing concepts in action rather than just reading about them
+4. **Real-world Scenarios**: How server additions/removals affect different strategies
+5. **Trade-offs**: When to use each strategy based on your requirements
+

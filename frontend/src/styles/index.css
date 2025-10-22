@@ -1,0 +1,51 @@
+/* Basic, Tailwind-free utility styling to match the preview feel */
+
+:root {
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --muted: #64748b;
+    --text: #0f172a;
+  }
+  
+  * { box-sizing: border-box; }
+  
+  html, body, #root { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji"; }
+  
+  .page { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
+  
+  .topbar { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 12px; }
+  .topbar h1 { margin: 0; font-size: 24px; font-weight: 700; }
+  .topbar p { margin: 4px 0 0 0; color: var(--muted); font-size: 14px; }
+  
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+  .section-title { font-size: 13px; font-weight: 600; color: #1f2937; margin-bottom: 8px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  
+  .btn { border: 1px solid var(--border); background: #fff; border-radius: 12px; padding: 6px 10px; font-size: 13px; cursor: pointer; }
+  .btn:hover { box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .btn.ghost { background: #f8fafc; }
+  
+  .input { width: 100%; border: 1px solid var(--border); border-radius: 12px; padding: 6px 10px; font-size: 13px; }
+  
+  .table-scroll { max-height: 360px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+  .table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .table th, .table td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  .table th.left, .table td.left { text-align: left; }
+  .table .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  .table tr.moved { background: #fff7ed; }
+  
+  /* keep the SVG fully visible; this stops the churn panel from overlapping the ring */
+  .card svg { display: block; overflow: visible; }
+  
+  /* small spacing tweak inside LegendTips */
+  .list { margin: 0; padding-left: 18px; color: var(--text); font-size: 13px; }
+  .list li { margin: 4px 0; }
+  .mt { margin-top: 10px; }
+  
